@@ -15,8 +15,8 @@ body {
     justify-content: center;
     align-content: center;
     min-height: 100vh;
-    grid-template-columns: repeat(5, 100px);
-    grid-template-rows: minmax(120px, auto) repeat(6, 100px);
+    grid-template-columns: repeat(5, 80px);
+    grid-template-rows: minmax(120px, auto) repeat(7, 80px);
 }
 
 .calculator-grid button {
@@ -29,16 +29,6 @@ body {
 
 .calculator-grid button:hover {
     background-color: rgba(255, 255, 255, 0.9);
-}
-
-.constants-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 50px);
-    grid-template-rows: repeat(2, 50px);
-}
-
-.constants-grid > button {
-    font-size: 1.5rem;
 }
 
 .span-2 {

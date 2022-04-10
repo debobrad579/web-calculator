@@ -1,25 +1,38 @@
-OPERATIONS = ['+', '-', '*', '÷', '^', '%']
-TRIG_FUNCTIONS = ['sin', 'cos', 'tan']
-OTHER_FUNCTIONS = ['log', 'sqrt']
+OPERATIONS = ['+', '-', '*', '÷', '^', '%'];
+TRIG_FUNCTIONS = ['sin', 'cos', 'tan'];
+FUNCTIONS = [
+    'log', 'sqrt',  'asin', 'acos', 'atan', 'asinh', 'acosh', 'atanh', 
+    'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh'
+];
 
 class Calculator {
     constructor(previousOperandOutput, currentOperandOutput) {
         this.previousOperandOutput = previousOperandOutput;
         this.currentOperandOutput = currentOperandOutput;
-        this.clear()
+        this.clear();
     }
 
     clear() {
         this.currentOperand = '';
         this.previousOperand = '';
-        this.operation = undefined;
         this.justComputed = false;
+        this.justErrored = false;
         this.arc = false;
         this.hyperbolic = false;
         this.updateDisplay();
     }
 
     delete() {
+        if (this.justErrored || this.justComputed) {this.clear(); return}
+
+        for (let i = 0; i < FUNCTIONS.length; i++) {
+            if (this.currentOperand.endsWith(FUNCTIONS[i] + '(')) {
+                this.currentOperand = this.currentOperand.slice(0, -FUNCTIONS[i].length - 1);
+                this.updateDisplay();
+                return;
+            }
+        }
+
         this.currentOperand = this.currentOperand.slice(0, -1);
         this.updateDisplay();
     }
@@ -29,23 +42,58 @@ class Calculator {
 
         if (this.justComputed) {
             if (!this.justErrored) {this.previousOperand = this.currentOperand}
-            else {this.previousOperand = ''}
-            this.currentOperand = '';
+            else {this.previousOperand = ''; this.justErrored = false}
+            if (!OPERATIONS.includes(string)) {this.currentOperand = ''}
             this.justComputed = false;
         }
 
         if (TRIG_FUNCTIONS.includes(string)) {
             if (this.arc) {string = 'a' + string}
             if (this.hyperbolic) {string += 'h'}
-            string += '(';
         }
 
-        if (OTHER_FUNCTIONS.includes(string)) {
+        if (FUNCTIONS.includes(string)) {
             string += '(';
         }
 
         this.currentOperand += string;
         this.updateDisplay();
+    }
+
+    compute() {
+        this.appendMultiplication();
+        this.convertFactorial();
+        this.previousOperand = this.currentOperandOutput.innerText;
+        this.justComputed = true;
+
+        fetch(`/api?equation=${this.currentOperand.replace('+', 'Ψ')}`)
+        .then(response => response.json())
+        .then(data => {
+            if (data.is_error) {this.justErrored = true}
+            else {this.previousOperand += ' ='}
+            this.currentOperand = data.equation;
+            this.updateDisplay();
+        });
+    }
+
+    updateDisplay() {
+        this.arc = false;
+        this.hyperbolic = false;
+        this.previousOperandOutput.innerText = this.previousOperand;
+
+        if (this.currentOperand === '') {this.currentOperandOutput.innerText = '0'; return}
+
+        if (this.justErrored) {
+            this.currentOperandOutput.style.fontSize = '1.5rem'
+            this.currentOperandOutput.style.wordWrap = 'normal';
+            this.currentOperandOutput.style.wordBreak = 'normal';
+        } else {
+            this.currentOperandOutput.style.fontSize = '2.5rem';
+            this.currentOperandOutput.style.wordWrap = 'break-word';
+            this.currentOperandOutput.style.wordBreak = 'break-all';
+        }
+
+        this.currentOperandOutput.innerText = this.currentOperand;
     }
 
     appendMultiplication() {
@@ -71,42 +119,19 @@ class Calculator {
             let reversedOperand = operands[i].split("").reverse().join("");
             if (i === operands.length - 1) {finalOperand += operands[i]; break}
             let bracketCount = 0;
-            let index = 0;
+            let insertAt = 0;
 
             for (let j = 0; j < reversedOperand.length; j++) {
                 if (reversedOperand[j] === ')') {bracketCount++}
                 if (reversedOperand[j] === '(') {bracketCount--}
-                if (bracketCount <= 0 && OPERATIONS.includes(reversedOperand[j])) {index = j; break}
+                if (bracketCount <= 0 && OPERATIONS.includes(reversedOperand[j])) {insertAt = j; break}
             }
 
-            reversedOperand = `)${reversedOperand.slice(0, index)}(lairotcaf${reversedOperand.slice(index)}`;
+            reversedOperand = `)${reversedOperand.slice(0, insertAt)}(lairotcaf${reversedOperand.slice(insertAt)}`;
             finalOperand += reversedOperand.split("").reverse().join("");
         }
 
         this.currentOperand = finalOperand.slice(1);
-    }
-
-    compute() {
-        this.appendMultiplication();
-        this.convertFactorial();
-        this.previousOperand = this.currentOperandOutput.innerText;
-        this.justComputed = true;
-
-        fetch(`/api?equation=${this.currentOperand.replace('+', 'Ψ')}`)
-        .then(response => response.json())
-        .then(data => {
-            if (data.is_error) {this.justErrored = true}
-            this.currentOperand = data.equation;
-            this.updateDisplay();
-        });
-    }
-
-    updateDisplay() {
-        this.arc = false;
-        this.hyperbolic = false;
-        this.previousOperandOutput.innerText = this.previousOperand;
-        if (this.currentOperand === '') {this.currentOperandOutput.innerText = '0'; return}
-        this.currentOperandOutput.innerText = this.currentOperand;
     }
 
     getLastOperationIndex() {

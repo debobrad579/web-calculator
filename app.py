@@ -6,21 +6,27 @@ i = 1j
 app = Flask(__name__, static_folder='static')
 
 basically_int = lambda x: int(x) if int(x) - 0.000001 < x < int(x) + 0.000001 else x
-factorial = lambda x: 1 if x == 0 else x * factorial(x - 1)
 
 
 def format_complex(func):
-    def wrapper(x):
+    def wrapper(x, round_digits=None):
         result = func(x)
 
+        if isinstance(result, float):
+            return round(result, round_digits) if round_digits is not None else result
+
         if isinstance(result, (int, float)) and result >= 1000000000:
-            return "{:.15e}".format(result)
+            return "{:.12e}".format(result)
 
         if not isinstance(result, complex):
             return result
 
         real = basically_int(result.real)
         imag = basically_int(result.imag)
+
+        if round_digits is not None:
+            real = round(real, round_digits)
+            imag = round(imag, round_digits)
 
         if imag == 0:
             return real
@@ -45,10 +51,11 @@ atan = format_complex(lambda x: i * log(i * x + sqrt(1 - x ** 2)))
 asinh = format_complex(lambda x: i * log(x + sqrt(x ** 2 + 1)))
 acosh = format_complex(lambda x: i * log(x + sqrt(x ** 2 - 1)))
 atanh = format_complex(lambda x: i * log((1 + x) / (1 - x)))
+factorial = lambda x: 1 if x == 0 else x * factorial(x - 1)
 
 
 @format_complex
-def solve(equation):
+def solve(equation, round_digits=None):
     try:
         return eval(equation.replace("^", "**").replace("÷", "/").replace("π", "pi").replace("Ψ", "+"))
     except Exception as error:
@@ -64,16 +71,16 @@ def index():
 def api_all():
     if request.args.get("equation"):
         equation = request.args.get("equation")
-        print(sin(pi))
+        result = solve(equation, 12)
 
-        if isinstance(solve(equation), Exception):
+        if isinstance(result, Exception):
             return jsonify({
-                "equation": str(solve(equation)),
+                "equation": str(result),
                 "is_error": True
             })
 
         return jsonify({
-            "equation": str(solve(equation)).replace("j", "i").replace("e+", "e").replace("e", "ᴇ"),
+            "equation": str(result).replace("j", "i").replace("e+", "e").replace("e", "ᴇ"),
             "is_error": False
         })
 
